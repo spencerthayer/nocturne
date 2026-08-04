@@ -1,7 +1,7 @@
 host_cc := env_var_or_default("HOSTCC", "/usr/bin/gcc-15")
 host_cxx := env_var_or_default("HOSTCXX", "/usr/bin/g++-15")
 
-build:
+build: checkpin
     [ -f output/.config ] || make -C buildroot BR2_EXTERNAL="$PWD/external" O="$PWD/output" BR2_DEFCONFIG="$PWD/configs/nocturne_defconfig" HOSTCC={{host_cc}} HOSTCXX={{host_cxx}} defconfig
     make -C buildroot BR2_EXTERNAL="$PWD/external" O="$PWD/output" BR2_DEFCONFIG="$PWD/configs/nocturne_defconfig" HOSTCC={{host_cc}} HOSTCXX={{host_cxx}} all
 
@@ -37,15 +37,33 @@ pre-commit-install:
 lint:
     pre-commit run --all-files
 
-# Verify the Buildroot nocturned pin is an ancestor of the integration tip.
-# Requires sibling checkout at ../nocturned with tag unchained-daemon-0.1.
+# Verify the Buildroot nocturned pin matches unchained/offline-integration exactly
+# and that annotated tags exist on origin (not local-only).
 checkpin:
     #!/usr/bin/env bash
     set -euo pipefail
     pin="$(awk '/^NOCTURNED_VERSION/{print $3; exit}' external/package/nocturned/nocturned.mk)"
     daemon="../nocturned"
     test -d "$daemon/.git"
-    git -C "$daemon" rev-parse -q --verify "${pin}^{commit}" >/dev/null
-    git -C "$daemon" merge-base --is-ancestor "$pin" unchained/offline-integration
-    echo "OK: $pin is ancestor of unchained/offline-integration ($(git -C "$daemon" rev-parse --short "$pin"))"
+    pinned="$(git -C "$daemon" rev-parse "${pin}^{commit}")"
+    tip="$(git -C "$daemon" rev-parse unchained/offline-integration)"
+    if [ "$pinned" != "$tip" ]; then
+        echo "checkpin: FAIL — pin $pin ($pinned) != tip $tip"
+        git -C "$daemon" log --oneline "$pinned..$tip" | sed 's/^/  missing: /'
+        exit 1
+    fi
+    if git -C "$daemon" show-ref --tags --quiet "refs/tags/${pin}"; then
+      remote="$(git -C "$daemon" ls-remote --tags origin "refs/tags/${pin}" | awk 'NR==1{print $1}')"
+      if [ -z "$remote" ]; then
+        echo "checkpin: FAIL — tag $pin missing on origin (local-only)"
+        exit 1
+      fi
+      remote_peeled="$(git -C "$daemon" ls-remote --tags origin "${pin}^{}" | awk '{print $1}')"
+      expect="${remote_peeled:-$remote}"
+      if [ "$expect" != "$pinned" ]; then
+        echo "checkpin: FAIL — origin tag $pin ($expect) != local ($pinned)"
+        exit 1
+      fi
+    fi
+    echo "OK: $pin == unchained/offline-integration ($(git -C "$daemon" rev-parse --short "$pinned")) and present on origin"
 

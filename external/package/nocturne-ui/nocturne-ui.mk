@@ -13,32 +13,15 @@
 #       >> output/local.mk
 #
 # When OVERRIDE_SRCDIR is set Buildroot rsyncs locally and skips download.
-# When it is NOT set, the build will fail loudly at extract time — there is
-# no remote SITE to fall back to.
+# When it is NOT set, the build fails at parse time — there is no remote SITE.
 #
 ################################################################################
 
-NOCTURNE_UI_VERSION = local
-NOCTURNE_UI_SITE_METHOD = local
-NOCTURNE_UI_SITE = /dev/null
+ifeq ($(NOCTURNE_UI_OVERRIDE_SRCDIR),)
+$(error NOCTURNE_UI_OVERRIDE_SRCDIR is unset. Build nocturne-ui locally and set it in output/local.mk — see local.mk.example)
+endif
 
-define NOCTURNE_UI_EXTRACT_CMDS
-	@if [ ! -d "$(@D)/dist" ] && [ ! -d "$(@D)/nocturne-ui" ]; then \
-		echo ""; \
-		echo "ERROR: NOCTURNE_UI_OVERRIDE_SRCDIR is not set."; \
-		echo ""; \
-		echo "nocturne-ui does not support remote download.  You must build the"; \
-		echo "UI locally and point Buildroot at the checkout:"; \
-		echo ""; \
-		echo "  cd ../nocturne-ui && bun install && bun run build"; \
-		echo "  echo 'NOCTURNE_UI_OVERRIDE_SRCDIR = \$$(TOPDIR)/../../../nocturne-ui' \\"; \
-		echo "      >> output/local.mk"; \
-		echo ""; \
-		echo "See local.mk.example for details."; \
-		echo ""; \
-		exit 1; \
-	fi
-endef
+NOCTURNE_UI_VERSION = local
 
 define NOCTURNE_UI_INSTALL_TARGET_CMDS
 	rm -rf $(TARGET_DIR)/etc/nocturne/ui
