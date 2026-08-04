@@ -37,3 +37,15 @@ pre-commit-install:
 lint:
     pre-commit run --all-files
 
+# Verify the Buildroot nocturned pin is an ancestor of the integration tip.
+# Requires sibling checkout at ../nocturned with tag unchained-daemon-0.1.
+checkpin:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    pin="$(awk '/^NOCTURNED_VERSION/{print $3; exit}' external/package/nocturned/nocturned.mk)"
+    daemon="../nocturned"
+    test -d "$daemon/.git"
+    git -C "$daemon" rev-parse -q --verify "${pin}^{commit}" >/dev/null
+    git -C "$daemon" merge-base --is-ancestor "$pin" unchained/offline-integration
+    echo "OK: $pin is ancestor of unchained/offline-integration ($(git -C "$daemon" rev-parse --short "$pin"))"
+
