@@ -98,6 +98,17 @@ Available recipes:
     pre-commit-install
 ```
 
+## Firmware Updates (Unchained)
+
+The upstream SWUpdate OTA flow (`ota.usenocturne.com`) has been removed. Firmware updates are applied manually via the Justfile `flash` recipe, which `dd`s a rootfs image over SSH to the Car Thing's A/B system partitions:
+
+```bash
+just flash a   # writes output/images/rootfs.ext2 → /dev/system_a, sets slot 0
+just flash b   # writes output/images/rootfs.ext2 → /dev/system_b, sets slot 1
+```
+
+The Car Thing must be reachable at `172.16.42.2` over the USB RNDIS link. After flashing, `phb -s` switches the active boot slot and a reboot picks up the new image.
+
 ## Subprojects
 
 Nocturne consists of several Git repos, all of which are public and open-source.
