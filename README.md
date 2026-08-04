@@ -87,6 +87,7 @@ The Justfile can help with some stuff, such as updating nocturne-ui (`just clean
 ```
 $ just -l
 Available recipes:
+    build
     clean
     cleandeps
     copyconfig
@@ -97,6 +98,23 @@ Available recipes:
     menuconfig
     pre-commit-install
 ```
+
+### Using local source overrides
+
+During development it is faster to build images from local daemon and UI
+checkouts instead of fetching from GitHub.  Copy `local.mk.example` to
+`output/local.mk` and uncomment the `OVERRIDE_SRCDIR` lines that point at
+sibling repos:
+
+```bash
+cp local.mk.example output/local.mk
+# edit output/local.mk — uncomment NOCTURNED_OVERRIDE_SRCDIR / NOCTURNE_UI_OVERRIDE_SRCDIR
+just cleandeps   # clear cached downloads + stale build artifacts
+just build       # full image using local sources
+```
+
+See `local.mk.example` for the expected workspace layout and per-package
+notes.
 
 ## Firmware Updates (Unchained)
 
