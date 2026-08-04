@@ -14,7 +14,7 @@
 #
 ################################################################################
 
-NOCTURNED_VERSION = unchained-daemon-0.2
+NOCTURNED_VERSION = unchained-daemon-0.3
 NOCTURNED_SITE_METHOD = git
 NOCTURNED_SITE = https://github.com/spencerthayer/nocturned.git
 
