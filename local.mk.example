@@ -29,15 +29,15 @@
 #
 # NOCTURNED_OVERRIDE_SRCDIR = $(TOPDIR)/../../../nocturned
 
-# --- nocturne-ui (React kiosk) ----------------------------------------------
-# The UI package expects a pre-built dist directory.  Build locally first:
+# --- nocturne-ui (React kiosk) -----------------------------------------------
+# MANDATORY — the nocturne-ui package has no remote download source.
+# The build will fail at extract time if this is not set.
+#
+# Build the UI first:
 #
 #   cd ../nocturne-ui && bun install && bun run build
 #
-# Then point Buildroot at the checkout root.  EXTRACT_CMDS looks for
-# $(@D)/nocturne-ui/* which rsync will populate from the dist/ output.
-# If the local tree's layout differs from the CI zip, adjust
-# NOCTURNE_UI_EXTRACT_CMDS in nocturne-ui.mk or stage dist/* into a
-# nocturne-ui/ subdirectory before the override rsync.
+# Then uncomment (or leave uncommented) the line below.  Buildroot will rsync
+# the local checkout's dist/ output into the build tree.
 #
-# NOCTURNE_UI_OVERRIDE_SRCDIR = $(TOPDIR)/../../../nocturne-ui
+NOCTURNE_UI_OVERRIDE_SRCDIR = $(TOPDIR)/../../../nocturne-ui
