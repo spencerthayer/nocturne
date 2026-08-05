@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# Publish already-built image artifacts through the OTA server's v2 publisher.
+# Usage: nocturne-release [dev|prod|all]
+# Env: NOCTURNE_RELEASE_VERSION, NOCTURNE_DELTA_FROM_VERSIONS,
+#      NOCTURNE_DEV_* / NOCTURNE_PROD_*, NOCTURNE_OTA_IMAGES_DIR,
+#      NOCTURNE_DEPLOY_DIR.
+# If the version variables are unset, the exact version is read from each SWU.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+IMAGE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+DEPLOY_DIR="${NOCTURNE_DEPLOY_DIR:-$IMAGE_DIR/build/tmp/deploy/images/superbird}"
+VARIANT_ARG="${1:-prod}"
+
+case "$VARIANT_ARG" in
+  dev | prod | all) ;;
+  *)
+    echo "usage: $(basename "$0") [dev|prod|all]" >&2
+    exit 2
+    ;;
+esac
+
+version_from_swu() {
+  local swu="$1"
+  local version
+
+  command -v bsdtar > /dev/null 2>&1 || {
+    echo "[release] bsdtar is required to read the SWU version" >&2
+    exit 2
+  }
+
+  version=$(bsdtar -xOf "$swu" sw-description |
+    awk -F'"' '/^[[:space:]]*version[[:space:]]*=/ { print $2 }')
+  if [[ -z "$version" || "$version" == *$'\n'* ]]; then
+    echo "[release] could not read exactly one version from $swu" >&2
+    exit 1
+  fi
+  printf '%s\n' "$version"
+}
+
+release_version_for_variant() {
+  case "$1" in
+    dev) printf '%s\n' "${NOCTURNE_DEV_RELEASE_VERSION:-${NOCTURNE_RELEASE_VERSION:-${SUPERBIRD_RELEASE_VERSION:-}}}" ;;
+    prod) printf '%s\n' "${NOCTURNE_PROD_RELEASE_VERSION:-${NOCTURNE_RELEASE_VERSION:-${SUPERBIRD_RELEASE_VERSION:-}}}" ;;
+  esac
+}
+
+delta_versions_for_variant() {
+  case "$1" in
+    dev) printf '%s\n' "${NOCTURNE_DEV_DELTA_FROM_VERSIONS:-${NOCTURNE_DELTA_FROM_VERSIONS:-}}" ;;
+    prod) printf '%s\n' "${NOCTURNE_PROD_DELTA_FROM_VERSIONS:-${NOCTURNE_DELTA_FROM_VERSIONS:-}}" ;;
+  esac
+}
+
+publish_variant() {
+  local variant="$1"
+  local version
+  local delta_from_versions
+  local full_swu="$DEPLOY_DIR/nocturne-update-${variant}-superbird.swu"
+
+  version=$(release_version_for_variant "$variant")
+  if [[ -z "$version" ]]; then
+    [[ -f "$full_swu" ]] || {
+      echo "[release] missing $full_swu" >&2
+      exit 1
+    }
+    version=$(version_from_swu "$full_swu")
+  fi
+
+  delta_from_versions=$(delta_versions_for_variant "$variant")
+  if [[ -z "$delta_from_versions" ]]; then
+    echo "[release] NOCTURNE_DELTA_FROM_VERSIONS is required for $variant" >&2
+    echo "[release] use '*' only after validating universal delta compatibility" >&2
+    exit 2
+  fi
+
+  echo "[release] publishing $variant image $version"
+  NOCTURNE_RELEASE_VERSION="$version" \
+    NOCTURNE_DELTA_FROM_VERSIONS="$delta_from_versions" \
+    "$SCRIPT_DIR/nocturne-publish" "$variant"
+}
+
+if [[ "$VARIANT_ARG" == "all" ]]; then
+  publish_variant dev
+  publish_variant prod
+else
+  publish_variant "$VARIANT_ARG"
+fi
