@@ -1,0 +1,43 @@
+# local.mk.example — Buildroot local overrides for Unchained development
+#
+# Copy this file to output/local.mk (Buildroot reads it automatically from
+# $(O)/local.mk when it exists).  Paths below assume the standard workspace
+# layout:
+#
+#   Nocturne Unchained/codebase/
+#     nocturne/          ← this repo (Buildroot firmware)
+#     nocturned/         ← daemon checkout
+#     nocturne-ui/       ← UI checkout
+#
+# With OVERRIDE_SRCDIR set, Buildroot rsyncs the local checkout into the
+# build tree instead of fetching from the remote SITE/VERSION.  This is
+# the fastest iteration loop for cross-repo changes.
+#
+# After changing a local source, run:
+#
+#   just cleandeps          # clears cached downloads + build artifacts
+#   just build              # full image rebuild from local sources
+#
+# Or rebuild a single package:
+#
+#   just install nocturned
+#   just install nocturne-ui
+
+# --- nocturned (Rust daemon) ------------------------------------------------
+# Point at the sibling daemon checkout.  Buildroot will rsync the source
+# tree and run the cargo-package build steps.
+#
+# NOCTURNED_OVERRIDE_SRCDIR = $(TOPDIR)/../../../nocturned
+
+# --- nocturne-ui (React kiosk) ----------------------------------------------
+# The UI package expects a pre-built dist directory.  Build locally first:
+#
+#   cd ../nocturne-ui && bun install && bun run build
+#
+# Then point Buildroot at the checkout root.  EXTRACT_CMDS looks for
+# $(@D)/nocturne-ui/* which rsync will populate from the dist/ output.
+# If the local tree's layout differs from the CI zip, adjust
+# NOCTURNE_UI_EXTRACT_CMDS in nocturne-ui.mk or stage dist/* into a
+# nocturne-ui/ subdirectory before the override rsync.
+#
+# NOCTURNE_UI_OVERRIDE_SRCDIR = $(TOPDIR)/../../../nocturne-ui

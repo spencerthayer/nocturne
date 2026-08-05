@@ -1,6 +1,10 @@
 host_cc := env_var_or_default("HOSTCC", "/usr/bin/gcc-15")
 host_cxx := env_var_or_default("HOSTCXX", "/usr/bin/g++-15")
 
+build:
+    [ -f output/.config ] || make -C buildroot BR2_EXTERNAL="$PWD/external" O="$PWD/output" BR2_DEFCONFIG="$PWD/configs/nocturne_defconfig" HOSTCC={{host_cc}} HOSTCXX={{host_cxx}} defconfig
+    make -C buildroot BR2_EXTERNAL="$PWD/external" O="$PWD/output" BR2_DEFCONFIG="$PWD/configs/nocturne_defconfig" HOSTCC={{host_cc}} HOSTCXX={{host_cxx}} all
+
 menuconfig:
     [ -f output/.config ] || make -C buildroot BR2_EXTERNAL="$PWD/external" O="$PWD/output" BR2_DEFCONFIG="$PWD/configs/nocturne_defconfig" HOSTCC={{host_cc}} HOSTCXX={{host_cxx}} defconfig
     make -C buildroot BR2_EXTERNAL="$PWD/external" O="$PWD/output" BR2_DEFCONFIG="$PWD/configs/nocturne_defconfig" HOSTCC={{host_cc}} HOSTCXX={{host_cxx}} menuconfig
